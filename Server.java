@@ -1,7 +1,10 @@
+import javafx.util.Pair;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -105,12 +108,27 @@ class ServerTestClass extends Thread {
             ArrayList<FileInfo> sendingPeers = new ArrayList<>();
             System.out.println("Searching for the file name...!!!");
 
+            int peerID = 0;
+            try {
+                peerID = (Integer) ois.readObject();
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+
+            Pair<String, Integer> pair = new Pair<> (socket.getInetAddress().getHostAddress(), peerID);
+
             for (int j = 0; j < Server.globalArray.size(); j++) {
                 FileInfo fileInfo = Server.globalArray.get(j);
                 Boolean tf = fileInfo.fileName.equals(str);
-                if (tf) {
+                if (tf && (fileInfo.arrList.isEmpty() || fileInfo.arrList.contains(pair))) {
                     //index = j;
                     sendingPeers.add(fileInfo);
+                }else if ( (tf && !fileInfo.arrList.contains(pair))) {
+                    System.out.println("Permission denied for file " + fileInfo.fileName);
+                    for (int i = 0; i < fileInfo.arrList.size(); i++) {
+                        System.out.println("This File is Permitted for: " + fileInfo.arrList.get(i).getKey() + "::" + fileInfo.arrList.get(i).getValue());
+                    }
+                    System.out.println("Peer " + socket.getInetAddress().getHostAddress() + "::" + peerID + " Denied");
                 }
             }
 
@@ -132,7 +150,3 @@ class ServerTestClass extends Thread {
         }
     }
 }
-    
-
- 
-

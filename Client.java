@@ -1,11 +1,17 @@
 import java.awt.*;
 import java.io.*;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import com.sun.jmx.snmp.InetAddressAcl;
+import javafx.util.Pair;
+
 
 public class Client {
     @SuppressWarnings({"unchecked", "rawtypes", "resource", "unused"})
@@ -35,14 +41,10 @@ public class Client {
 
             ServerDownload objServerDownload = new ServerDownload(peerServerPort, directoryPath);
             objServerDownload.start();
-			
-			/*Socket clientThread = new Socket("localhost",7799);
-			
-			ObjectOutputStream objOutStream = new ObjectOutputStream(clientThread.getOutputStream());
-			ObjectInputStream objInStream = new ObjectInputStream(clientThread.getInputStream());*/
 
             socket = new Socket("localhost", 7799);
             System.out.println("Connection has been established with the client");
+            System.out.println("Your IP Address: " + socket.getInetAddress().getHostAddress());
 
             ois = new ObjectInputStream(socket.getInputStream());
             oos = new ObjectOutputStream(socket.getOutputStream());
@@ -62,6 +64,26 @@ public class Client {
                 currentFile.fileName = file.getName();
                 currentFile.peerid = readpid;
                 currentFile.portNumber = peerServerPort;
+
+                System.out.println("Add Special Access Permissions to File " + currentFile.fileName + "? Y/N");
+                String ch = br.readLine();
+
+                if (ch.equalsIgnoreCase("Y")) {
+                    while(true) {
+                        System.out.println("1- Allow new IP\n2- Done, Continue");
+                        int choice = Integer.parseInt(br.readLine());
+
+                        if (choice == 1) {
+                            System.out.println("Enter IP Address:");
+                            InetAddress address = InetAddress.getByName(br.readLine());
+                            System.out.println("Enter PeerID:");
+                            int peerID = Integer.parseInt(br.readLine());
+                            Pair<String, Integer> pair = new Pair<>(address.getHostAddress(), peerID);
+                            currentFile.arrList.add(pair);
+                        } else break;
+                    }
+                }
+
                 arrList.add(currentFile);
             }
 
@@ -69,6 +91,7 @@ public class Client {
             //System.out.println("The complete ArrayList :::"+arrList);
 
             while (true) {
+
                 System.out.println("Enter the desired file name that you want to downloaded from the list of the files available in the Server or Exit ::");
                 String fileNameToDownload = br.readLine();
 
@@ -80,6 +103,9 @@ public class Client {
                 }
 
                 oos.writeObject(fileNameToDownload);
+                oos.flush();
+                oos.writeObject(readpid);
+                oos.flush();
 
                 System.out.println("Waiting for the reply from Server...!!");
 
@@ -108,6 +134,7 @@ public class Client {
                 int clientAsServerPeerid = Integer.parseInt(br.readLine());
 
                 clientAsServer(clientAsServerPortNumber, fileNameToDownload, directoryPath);
+
             }
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
